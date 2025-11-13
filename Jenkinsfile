@@ -16,10 +16,10 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
                     sh '''
-                    ${SCANNER_HOME}/bin/sonar-scanner \
-                      -Dsonar.projectKey=python-app \
+                    sonar-scanner \
+                      -Dsonar.projectKey=${PROJECT_KEY} \
                       -Dsonar.sources=. \
                       -Dsonar.host.url=$SONAR_HOST_URL \
                       -Dsonar.login=$SONAR_AUTH_TOKEN
@@ -27,7 +27,6 @@ pipeline {
                 }
             }
         }
-
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
