@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/argadepp/assignment-finjo.git
+                git branch: 'main', url: 'https://github.com/argadepp/assignment-finjo.git'
             }
         }
 
