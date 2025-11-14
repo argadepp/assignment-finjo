@@ -5,6 +5,12 @@ pipeline {
         SONARQUBE_ENV = 'sonarqube' // Name from Jenkins config
         PROJECT_KEY = 'python-app'
     }
+    parameters {
+        booleanParam(
+            name: 'ENABLE_DEPLOY',
+            defaultValue: false,
+            description: 'Enable deployment?'
+        )}    
 
     stages {
         stage('Checkout') {
