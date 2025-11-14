@@ -89,10 +89,10 @@ stage('Update Image Tag & Deploy') {
     steps {
         sh '''
         IMAGE_TAG=${BUILD_NUMBER}
-        IMAGE="ghcr.io/argadepp/python-fastapi:$IMAGE_TAG"
+        IMAGE="ghcr.io/argadepp/fastapi-csv-app:$IMAGE_TAG"
 
         echo "📌 Updating image tag in manifest using sed..."
-        sed -i "s#ghcr.io/argadepp/python-fastapi:.*#ghcr.io/argadepp/python-fastapi:$IMAGE_TAG#g" k8s/deployment.yaml
+        sed -i "s#ghcr.io/argadepp/fastapi-csv-app:.*#ghcr.io/argadepp/fastapi-csv-app:$IMAGE_TAG#g" k8s/deployment.yaml
 
         echo "📌 Deploying to Kubernetes..."
         kubectl apply -f k8s/deployment.yaml
