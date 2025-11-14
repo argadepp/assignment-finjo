@@ -7,7 +7,7 @@ pipeline {
     }
     parameters {
         booleanParam(
-            name: 'ENABLE_DEPLOY',
+            name: 'DEPLOY_ENABLED',
             defaultValue: false,
             description: 'Enable deployment?'
         )}    
