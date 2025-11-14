@@ -42,6 +42,7 @@ pipeline {
             }
             steps {
                 sh 'echo "Deploying application..."'
+                sh 'kubectl apply -f k8s/observability.yaml'
             }
         }
 
