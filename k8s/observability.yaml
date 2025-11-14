@@ -982,3 +982,23 @@ spec:
     targetPort: 27017
   selector:
     name: user-db
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop-ingress
+  namespace: sock-shop
+         # Specify the ingress class # Reference to the ClusterIssuer
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: shop.devopspratik.tech
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: front-end
+                port:
+                  number: 80
