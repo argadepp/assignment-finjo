@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'DEPLOY_ENABLED',
+            defaultValue: false,
+            description: 'Enable deployment?'
+        )}    
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master', url: 'https://github.com/argadepp/assignment-finjo.git'
+            }
+        }
+
+        stage('Deploy (optional)') {
+            when {
+                expression { return params.DEPLOY_ENABLED == true }
+            }
+            steps {
+                sh 'echo "Deploying application..."'
+                sh 'kubectl apply -f k8s/observability.yaml'
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                echo 'Cleaning up workspace and virtual environment...'
+                sh '''
+                deactivate || true
+                rm -rf venv
+                docker system prune -af || true
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed. Workspace cleanup...'
+            cleanWs()
+        }
+    }
+}
