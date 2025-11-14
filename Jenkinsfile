@@ -105,6 +105,8 @@ spec:
       labels:
         app: fastapi-app
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret    
       containers:
       - name: fastapi-container
         image: ${IMAGE_NAME}:${BUILD_NUMBER}
