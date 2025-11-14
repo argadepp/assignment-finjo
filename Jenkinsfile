@@ -84,38 +84,22 @@ pipeline {
             }
         }
 
-        stage('Generate Manifest') {
-            steps {
-                sh '''
-                echo "Generating Kubernetes manifest file..."
-                mkdir -p k8s
+stage('Update Image Tag & Deploy') {
+    when { expression { return params.DEPLOY_ENABLED == true } }
+    steps {
+        sh '''
+        IMAGE_TAG=build-${BUILD_NUMBER}
+        IMAGE="ghcr.io/argadepp/python-fastapi:$IMAGE_TAG"
 
-                cat > k8s/deployment.yaml <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: fastapi-app
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: fastapi-app
-  template:
-    metadata:
-      labels:
-        app: fastapi-app
-    spec:
-      imagePullSecrets:
-        - name: ghcr-secret    
-      containers:
-      - name: fastapi-container
-        image: ${IMAGE_NAME}:${BUILD_NUMBER}
-        ports:
-        - containerPort: 8000
-EOF
-                '''
-            }
-        }
+        echo "📌 Updating image tag in manifest using sed..."
+        sed -i "s#ghcr.io/argadepp/python-fastapi:.*#ghcr.io/argadepp/python-fastapi:$IMAGE_TAG#g" k8s/deployment.yaml
+
+        echo "📌 Deploying to Kubernetes..."
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/svc.yaml
+        '''
+    }
+}
 
         stage('Deploy (optional)') {
             when {

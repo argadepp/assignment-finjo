@@ -1,0 +1,30 @@
+# service ffor fastapi app
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-service   
+spec:
+  selector:
+    app: fastapi-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fastapi-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: fastapi.devopspratik.tech
+      http:
+        paths: 
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fastapi-service
+                port:
+                  number: 80

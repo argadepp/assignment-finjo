@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-app
+  template:
+    metadata:
+      labels:
+        app: fastapi-app
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: fastapi
+          image: ghcr.io/argadepp/python-fastapi:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
