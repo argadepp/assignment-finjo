@@ -88,7 +88,7 @@ stage('Update Image Tag & Deploy') {
     when { expression { return params.DEPLOY_ENABLED == true } }
     steps {
         sh '''
-        IMAGE_TAG=build-${BUILD_NUMBER}
+        IMAGE_TAG=${BUILD_NUMBER}
         IMAGE="ghcr.io/argadepp/python-fastapi:$IMAGE_TAG"
 
         echo "📌 Updating image tag in manifest using sed..."
