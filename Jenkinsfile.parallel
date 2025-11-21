@@ -1,0 +1,186 @@
+pipeline {
+    agent none   // We will use docker agents per stage
+
+    environment {
+        SONARQUBE_ENV = 'sonarqube'
+        PROJECT_KEY = 'python-app'
+        IMAGE_NAME = 'ghcr.io/argadepp/fastapi-csv-app'
+    }
+
+    parameters {
+        booleanParam(
+            name: 'DEPLOY_ENABLED',
+            defaultValue: false,
+            description: 'Enable deployment?'
+        )
+    }
+
+    stages {
+
+        /*************************
+         * CHECKOUT
+         *************************/
+        stage('Checkout') {
+            agent {
+                docker {
+                    image 'alpine/git:latest'
+                }
+            }
+            steps {
+                git branch: 'master', url: 'https://github.com/argadepp/assignment-finjo.git'
+            }
+        }
+
+        /*************************
+         * PARALLEL PIPELINE
+         *************************/
+        stage('Parallel Build Stages') {
+            parallel {
+
+                /*************************
+                 * SONAR SCANNER PIPELINE
+                 *************************/
+                stage('SonarQube Analysis') {
+                    agent {
+                        docker {
+                            image 'sonarsource/sonar-scanner-cli:latest'
+                        }
+                    }
+                    steps {
+                        withSonarQubeEnv("${SONARQUBE_ENV}") {
+                            sh '''
+                            sonar-scanner \
+                              -Dsonar.projectKey=${PROJECT_KEY} \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=$SONAR_HOST_URL \
+                              -Dsonar.login=$SONAR_AUTH_TOKEN
+                            '''
+                        }
+                    }
+                }
+
+                stage('Quality Gate') {
+                    agent { docker { image 'alpine:latest' } }
+                    steps {
+                        timeout(time: 10, unit: 'MINUTES') {
+                            waitForQualityGate abortPipeline: true
+                        }
+                    }
+                }
+
+                /*************************
+                 * DOCKER BUILD & PUSH PIPELINE
+                 *************************/
+                stage('Docker Build & Push') {
+                    agent {
+                        docker {
+                            image 'docker:24.0.5'
+                            args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
+                        }
+                    }
+
+                    stages {
+
+                        stage('Build Docker Image') {
+                            steps {
+                                sh '''
+                                echo "Building Docker image inside docker agent..."
+                                docker build -t ${IMAGE_NAME}:latest .
+                                docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:${BUILD_NUMBER}
+                                '''
+                            }
+                        }
+
+                        stage('Push to GHCR') {
+                            steps {
+                                withCredentials([usernamePassword(credentialsId: 'GHCR_CREDENTIALS',
+                                                                  usernameVariable: 'GH_USER',
+                                                                  passwordVariable: 'GH_TOKEN')]) {
+
+                                    sh '''
+                                    echo $GH_TOKEN | docker login ghcr.io -u $GH_USER --password-stdin
+                                    docker push ${IMAGE_NAME}:latest
+                                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                                    '''
+                                }
+                            }
+                        }
+
+                        stage('Remove Local Docker Images') {
+                            steps {
+                                sh '''
+                                docker rmi ${IMAGE_NAME}:latest || true
+                                docker rmi ${IMAGE_NAME}:${BUILD_NUMBER} || true
+                                '''
+                            }
+                        }
+                    }
+                }
+
+            }  // end parallel
+        }
+
+        /*************************
+         * DEPLOYMENT STAGE
+         *************************/
+        stage('Update Image Tag & Deploy') {
+            when { expression { return params.DEPLOY_ENABLED == true } }
+
+            agent {
+                docker {
+                    image 'bitnami/kubectl:latest'
+                    args '--entrypoint=""'
+                }
+            }
+
+            steps {
+                sh '''
+                IMAGE_TAG=${BUILD_NUMBER}
+
+                sed -i "s#ghcr.io/argadepp/fastapi-csv-app:.*#ghcr.io/argadepp/fastapi-csv-app:${IMAGE_TAG}#g" k8s/deployment.yaml
+
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/svc.yaml
+                '''
+            }
+        }
+
+        stage('Deploy (optional)') {
+            when { expression { return params.DEPLOY_ENABLED == true } }
+
+            agent {
+                docker {
+                    image 'bitnami/kubectl:latest'
+                }
+            }
+
+            steps {
+                sh '''
+                kubectl apply -f k8s/deployment.yaml
+                '''
+            }
+        }
+
+        /*************************
+         * CLEANUP
+         *************************/
+        stage('Cleanup') {
+            agent {
+                docker {
+                    image 'docker:24.0.5'
+                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+            steps {
+                sh 'docker system prune -af || true'
+            }
+        }
+
+    } // end stages
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
