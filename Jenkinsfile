@@ -23,20 +23,20 @@ pipeline {
             }
         }
 
-        // stage('SonarQube Analysis') {
-        //     steps {
-        //         withSonarQubeEnv("${SONARQUBE_ENV}") {
-        //             sh '''
-        //             export PATH="$PATH:/opt/sonar-scanner/bin"
-        //             sonar-scanner \
-        //               -Dsonar.projectKey=${PROJECT_KEY} \
-        //               -Dsonar.sources=. \
-        //               -Dsonar.host.url=$SONAR_HOST_URL \
-        //               -Dsonar.login=$SONAR_AUTH_TOKEN
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                    export PATH="$PATH:/opt/sonar-scanner/bin"
+                    sonar-scanner \
+                      -Dsonar.projectKey=${PROJECT_KEY} \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=$SONAR_HOST_URL \
+                      -Dsonar.login=$SONAR_AUTH_TOKEN
+                    '''
+                }
+            }
+        }
 
         // stage('Quality Gate') {
         //     steps {
